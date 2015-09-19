@@ -124,7 +124,6 @@ void loop()
       darkLed = NUM_LEDS-2;
       inc = -1;
     }
-
   }
 }
 
