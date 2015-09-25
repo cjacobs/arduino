@@ -1,129 +1,263 @@
-/*
- */
 
-#define NUM_LEDS 5
-const int NUM_COLS = 4;
-const int NUM_ROWS = 3;
+const int NUM_ROWS = 8;
+const int NUM_COLS = 8;
+ 
+const int rowSignalPin = 12;
+const int rowClockPin = 11;
+const int colSignalPin = 10;
+const int colClockPin = 9;
+const int outputEnablePin = 8;
 
-// constants won't change. Used here to set a pin number :
-const int ledPins[NUM_LEDS] = {13,12,11,10,9};
 
-const int colLedPins[] = {8,7,6,5};
-const int rowLedPins[] = {4,3,2};
+const int nextRowInterval = 0;
+unsigned long nextRowTime = 0;
 
-const long interval = 100;           // interval at which to blink (milliseconds)
-unsigned long nextBlinkTime = 0;        // will store next time to update LED
+int currCol = 0;
+int currGlyphLevel = 0;
 
-bool ledValues[NUM_LEDS];
+unsigned char zChar[] = { 
+  0b01111100,
+  0b00000100,
+  0b00001000,
+  0b00010000,
+  0b00100000,
+  0b01000000,
+  0b01000000,
+  0b01111100
+};
 
-int darkLed = 0;
-int inc = 1;
+unsigned char oChar[] = { 
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00111000,
+  0b01000100,
+  0b01000100,
+  0b01000100,
+  0b00111000
+};
 
-void setup() {
-  // set the digital pins as output:
-  for(int index = 0; index < NUM_LEDS; index++)
-  {
-    pinMode(ledPins[index], OUTPUT);
-  }
+unsigned char eChar[] = { 
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00111000,
+  0b01000100,
+  0b01111100,
+  0b01000000,
+  0b00111100
+};
 
-  for(int index = 0; index < NUM_COLS; index++)
-    pinMode(colLedPins[index], OUTPUT);
+unsigned char spaceChar[] = { 
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000
+};
+
+unsigned char heartChar[] = {
+  0b00000000,
+  0b01101100,
+  0b11111110,
+  0b11111110,
+  0b11111110,
+  0b01111100,
+  0b00111000,
+  0b00010000
+};
+
+unsigned char heartChar2[] = {
+  0b00000000,
+  0b01101100,
+  0b10010010,
+  0b10000010,
+  0b10000010,
+  0b01000100,
+  0b00101000,
+  0b00010000
+};
+
+unsigned char smileCharA[] = {
+  0b01111110,
+  0b10000001,
+  0b10100101,
+  0b10000001,
+  0b10000001,
+  0b10111101,
+  0b10000001,
+  0b01111110
+};
+
+unsigned char smileCharB[] = {
+  0b01111110,
+  0b10000001,
+  0b10100101,
+  0b10000001,
+  0b10100101,
+  0b10011001,
+  0b10000001,
+  0b01111110
+};
+
+unsigned char faceChar[] = {
+  0b00000000,
+  0b00111100,
+  0b01011010,
+  0b11111111,
+  0b11000011,
+  0b11000011,
+  0b01100110,
+  0b00111100
+};
+
+
+unsigned char eyeChar[] = {
+  0b00000000,
+  0b00000000,
+  0b00111100,
+  0b01000010,
+  0b10010001,
+  0b01000010,
+  0b00111100,
+  0b00000000
+};
+
+unsigned char uChar[] = {
+  0b00000000,
+  0b00000000,
+  0b01000100,
+  0b01000100,
+  0b01000100,
+  0b01000100,
+  0b01000100,
+  0b00111000
+};
+
+unsigned char* message[] = {zChar, oChar, eChar, spaceChar, eyeChar, heartChar, uChar, spaceChar, smileCharA, smileCharB, spaceChar};
+unsigned char* message2[] = {zChar, oChar, eChar, spaceChar, eyeChar, heartChar2, uChar, spaceChar, smileCharA, smileCharB, spaceChar};
+const int NUM_LETTERS = sizeof(message) / sizeof(message[0]);
+int currLetter = 0;
+
+const int updateLetterInterval = 800;
+unsigned long nextLetterTime = 0;
+
+void reset()
+{
+  // disable outputs and fill shift registers with "off" value
+  digitalWrite(outputEnablePin, HIGH); // HIGH disables output
+  digitalWrite(rowSignalPin, HIGH); // HIGH is off for rows
+  digitalWrite(colSignalPin, LOW); // LOW is off for cols
   for(int index = 0; index < NUM_ROWS; index++)
-    pinMode(rowLedPins[index], OUTPUT);
-}
-
-void setLeds(bool values[NUM_LEDS])
-{
-    for(int index = 0; index < NUM_LEDS; index++)
-    {
-      digitalWrite(ledPins[index], values[index] ? LOW : HIGH);
-    } 
-}
-
-void setRow(int rowIndex, unsigned char bitmask)
-{
-  // first turn off all rows
-  for(int index = 0; index < NUM_COLS; index++)
   {
-    digitalWrite(colLedPins[index], HIGH);
+    digitalWrite(rowClockPin, HIGH);
+    digitalWrite(colClockPin, HIGH);
+    digitalWrite(rowClockPin, LOW);
+    digitalWrite(colClockPin, LOW);  
   }
 
-  for(int colIndex = 0; colIndex < NUM_ROWS; colIndex++)
+  // init to first column on:
+  currCol = 0;
+  digitalWrite(colSignalPin, HIGH);
+  digitalWrite(colClockPin, HIGH);
+  digitalWrite(colClockPin, LOW);
+}
+
+void setColumn(int col)
+{
+  digitalWrite(colSignalPin, LOW);
+  for(int index = 0; index < 9; index++)
   {
-    digitalWrite(rowLedPins[colIndex], bitmask & 0x01 ? HIGH : LOW);
+    digitalWrite(colClockPin, HIGH);
+    digitalWrite(colClockPin, LOW);
+  }  
+
+  digitalWrite(colSignalPin, HIGH);
+  digitalWrite(colClockPin, HIGH);
+  digitalWrite(colClockPin, LOW);
+
+  digitalWrite(colSignalPin, LOW);
+  for(int index = 0; index <= col; index++)
+  {
+    digitalWrite(colClockPin, HIGH);
+    digitalWrite(colClockPin, LOW);
+  }
+}
+
+void advanceColumn()
+{
+  currCol = (currCol+1) % 8;
+
+  digitalWrite(colSignalPin, currCol == 0 ? HIGH : LOW);
+
+  // toggle the column clock
+  digitalWrite(colClockPin, HIGH);
+  digitalWrite(colClockPin, LOW);
+}
+
+void setRow(unsigned char bitmask)
+{
+  for(int index = 0; index < NUM_COLS; index++)
+  {
+    digitalWrite(rowSignalPin, bitmask & 0x01 ? LOW : HIGH);
+
+    // toggle clock
+    digitalWrite(rowClockPin, HIGH);
+    digitalWrite(rowClockPin, LOW);
+
     bitmask >>= 1;
   }
-
-  // now activate the row
-  digitalWrite(colLedPins[rowIndex], LOW);
-  
+  digitalWrite(rowClockPin, HIGH);
+  digitalWrite(rowClockPin, LOW);
 }
 
-const int nextRowInterval = 2;
-unsigned long nextRowTime = 0;
-int currRow = 0;
-unsigned char rowVals[] = { 0b101, 0b000, 0b101, 0b111 };
+void setup() {
+  pinMode(rowSignalPin, OUTPUT);
+  pinMode(rowClockPin, OUTPUT);
+  pinMode(colSignalPin, OUTPUT);
+  pinMode(colClockPin, OUTPUT);
+  pinMode(outputEnablePin, OUTPUT);
 
+  unsigned long currentMillis = millis();
+  nextLetterTime = currentMillis + updateLetterInterval;
 
-const int updatePatternInterval = 1000;
-unsigned long nextPatternTime = 0;
-
-void updatePattern()
-{
-  for(int rowIndex = 0; rowIndex < NUM_COLS; rowIndex++)
-  {
-      rowVals[rowIndex] = ~rowVals[rowIndex];
-  }
+  
+  reset();
 }
 
 void loop()
 {  
-  // check to see if it's time to blink the LED; that is, if the
-  // difference between the current time and last time you blinked
-  // the LED is bigger than the interval at which you want to
-  // blink the LED.
   unsigned long currentMillis = millis();
 
-  if(currentMillis > nextPatternTime)
+  if(currentMillis > nextLetterTime)
   {
-    updatePattern();
-    nextPatternTime += updatePatternInterval;
+    currLetter = (currLetter+1) % NUM_LETTERS;
+    nextLetterTime += updateLetterInterval;
   }
 
   if(currentMillis > nextRowTime)
   {
-    currRow = (currRow+1) % NUM_COLS;
-    setRow(currRow, rowVals[currRow]);
+    digitalWrite(outputEnablePin, HIGH);
+    setColumn(currCol);
+    if(currGlyphLevel == 0)
+    {
+    setRow(message[currLetter][currCol]);    
+    }
+    else
+    {
+    setRow(message2[currLetter][currCol]);          
+    }
+    currGlyphLevel = (currGlyphLevel+1) % 3;
+//    advanceColumn();
+    digitalWrite(outputEnablePin, LOW);
+
+    currCol = (currCol+1) % NUM_COLS;
     nextRowTime = currentMillis + nextRowInterval;
   }
 
- 
-  if(currentMillis > nextBlinkTime) 
-  {
-    nextBlinkTime += interval;
-
-    for(int index = 0; index < NUM_LEDS; index++)
-    {
-      digitalWrite(ledPins[index], (index==darkLed)?LOW:HIGH);
-    }
-
-    for(int index = 0; index < NUM_LEDS; index++)
-    {
-      ledValues[index] = index == darkLed;
-    }
-    setLeds(ledValues);
-
-    darkLed += inc;
-    if(darkLed < 0)
-    {
-      darkLed = 1;
-      inc = 1;
-    }
-    else if(darkLed >= NUM_LEDS)
-    {
-      darkLed = NUM_LEDS-2;
-      inc = -1;
-    }
-  }
+  
 }
 
