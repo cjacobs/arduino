@@ -15,7 +15,7 @@ unsigned long nextRowTime = 0;
 int currCol = 0;
 int currGlyphLevel = 0;
 
-unsigned char zChar[] = { 
+const unsigned char zChar[] = { 
   0b01111100,
   0b00000100,
   0b00001000,
@@ -26,7 +26,7 @@ unsigned char zChar[] = {
   0b01111100
 };
 
-unsigned char oChar[] = { 
+const unsigned char oChar[] = { 
   0b00000000,
   0b00000000,
   0b00000000,
@@ -37,7 +37,7 @@ unsigned char oChar[] = {
   0b00111000
 };
 
-unsigned char eChar[] = { 
+const unsigned char eChar[] = { 
   0b00000000,
   0b00000000,
   0b00000000,
@@ -48,7 +48,7 @@ unsigned char eChar[] = {
   0b00111100
 };
 
-unsigned char spaceChar[] = { 
+const unsigned char spaceChar[] = { 
   0b00000000,
   0b00000000,
   0b00000000,
@@ -59,7 +59,7 @@ unsigned char spaceChar[] = {
   0b00000000
 };
 
-unsigned char heartChar[] = {
+const unsigned char fullHeartChar[] = {
   0b00000000,
   0b01101100,
   0b11111110,
@@ -70,7 +70,7 @@ unsigned char heartChar[] = {
   0b00010000
 };
 
-unsigned char heartChar2[] = {
+const unsigned char hollowHeartChar[] = {
   0b00000000,
   0b01101100,
   0b10010010,
@@ -81,10 +81,21 @@ unsigned char heartChar2[] = {
   0b00010000
 };
 
-unsigned char smileCharA[] = {
+const unsigned char insideHeartChar[] = {
+  0b00000000,
+  0b00000000,
+  0b01101100,
+  0b01111100,
+  0b01111100,
+  0b00111000,
+  0b00010000,
+  0b00000000
+};
+
+const unsigned char smileCharA1[] = {
   0b01111110,
   0b10000001,
-  0b10100101,
+  0b10000001,
   0b10000001,
   0b10000001,
   0b10111101,
@@ -92,10 +103,10 @@ unsigned char smileCharA[] = {
   0b01111110
 };
 
-unsigned char smileCharB[] = {
+const unsigned char smileCharB1[] = {
   0b01111110,
   0b10000001,
-  0b10100101,
+  0b10000001,
   0b10000001,
   0b10100101,
   0b10011001,
@@ -103,19 +114,29 @@ unsigned char smileCharB[] = {
   0b01111110
 };
 
-unsigned char faceChar[] = {
-  0b00000000,
-  0b00111100,
-  0b01011010,
-  0b11111111,
-  0b11000011,
-  0b11000011,
-  0b01100110,
-  0b00111100
+const unsigned char smileCharA2[] = {
+  0b01111110,
+  0b10000001,
+  0b10100101,
+  0b10000001,
+  0b10000001,
+  0b10000001,
+  0b10000001,
+  0b01111110
 };
 
+const unsigned char smileCharB2[] = {
+  0b01111110,
+  0b10000001,
+  0b10100101,
+  0b10000001,
+  0b10000001,
+  0b10000001,
+  0b10000001,
+  0b01111110
+};
 
-unsigned char eyeChar[] = {
+const unsigned char eyeChar[] = {
   0b00000000,
   0b00000000,
   0b00111100,
@@ -126,7 +147,7 @@ unsigned char eyeChar[] = {
   0b00000000
 };
 
-unsigned char uChar[] = {
+const unsigned char uChar[] = {
   0b00000000,
   0b00000000,
   0b01000100,
@@ -137,9 +158,37 @@ unsigned char uChar[] = {
   0b00111000
 };
 
-unsigned char* message[] = {zChar, oChar, eChar, spaceChar, eyeChar, heartChar, uChar, spaceChar, smileCharA, smileCharB, spaceChar};
-unsigned char* message2[] = {zChar, oChar, eChar, spaceChar, eyeChar, heartChar2, uChar, spaceChar, smileCharA, smileCharB, spaceChar};
-const int NUM_LETTERS = sizeof(message) / sizeof(message[0]);
+unsigned char check1[] = {
+  0b01010101,
+  0b10101010,
+  0b01010101,
+  0b10101010,
+  0b01010101,
+  0b10101010,
+  0b01010101,
+  0b10101010
+};
+
+unsigned char check2[] = {
+  0b10101010,
+  0b01010101,
+  0b10101010,
+  0b01010101,
+  0b10101010,
+  0b01010101,
+  0b10101010,
+  0b01010101
+};
+
+const unsigned char blankChar[] = {0,0,0,0,0,0,0,0};
+
+const unsigned char* rMessage[] =  {zChar, oChar, eChar, spaceChar, eyeChar, fullHeartChar, uChar, spaceChar, smileCharA1, smileCharB1, spaceChar, check1};
+const unsigned char* rMessage2[] = {zChar, oChar, eChar, spaceChar, eyeChar, hollowHeartChar, uChar, spaceChar, smileCharA1, smileCharB1, spaceChar, check1};
+
+const unsigned char* gMessage[] =  {zChar, oChar, eChar, spaceChar, eyeChar, insideHeartChar, uChar, spaceChar, smileCharA2, smileCharB2, spaceChar, check2};
+const unsigned char* gMessage2[] = {zChar, oChar, eChar, spaceChar, eyeChar, spaceChar, uChar, spaceChar, smileCharA2, smileCharB2, spaceChar, check2};
+
+const int NUM_LETTERS = sizeof(rMessage) / sizeof(rMessage[0]);
 int currLetter = 0;
 
 const int updateLetterInterval = 800;
@@ -198,18 +247,25 @@ void advanceColumn()
   digitalWrite(colClockPin, LOW);
 }
 
-void setRow(unsigned char bitmask)
+void writeByte(unsigned char val, int signalPin, int clockPin)
 {
-  for(int index = 0; index < NUM_COLS; index++)
+  for(int index = 0; index < 8; index++)
   {
-    digitalWrite(rowSignalPin, bitmask & 0x01 ? LOW : HIGH);
+    digitalWrite(signalPin, val & 0x01 ? LOW : HIGH);
 
     // toggle clock
-    digitalWrite(rowClockPin, HIGH);
-    digitalWrite(rowClockPin, LOW);
+    digitalWrite(clockPin, HIGH);
+    digitalWrite(clockPin, LOW);
 
-    bitmask >>= 1;
-  }
+    val >>= 1;
+  }  
+}
+
+void setRow(unsigned char rByte, unsigned char gByte)
+{
+  writeByte(gByte, rowSignalPin, rowClockPin);    
+  writeByte(rByte, rowSignalPin, rowClockPin);    
+
   digitalWrite(rowClockPin, HIGH);
   digitalWrite(rowClockPin, LOW);
 }
@@ -244,11 +300,11 @@ void loop()
     setColumn(currCol);
     if(currGlyphLevel == 0)
     {
-    setRow(message[currLetter][currCol]);    
+      setRow(rMessage[currLetter][currCol], gMessage[currLetter][currCol]);    
     }
     else
     {
-    setRow(message2[currLetter][currCol]);          
+      setRow(rMessage2[currLetter][currCol], gMessage2[currLetter][currCol]);
     }
     currGlyphLevel = (currGlyphLevel+1) % 3;
 //    advanceColumn();
