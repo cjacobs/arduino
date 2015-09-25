@@ -8,7 +8,6 @@ const int colSignalPin = 10;
 const int colClockPin = 9;
 const int outputEnablePin = 8;
 
-
 const int nextRowInterval = 0;
 unsigned long nextRowTime = 0;
 
@@ -198,53 +197,7 @@ void reset()
 {
   // disable outputs and fill shift registers with "off" value
   digitalWrite(outputEnablePin, HIGH); // HIGH disables output
-  digitalWrite(rowSignalPin, HIGH); // HIGH is off for rows
-  digitalWrite(colSignalPin, LOW); // LOW is off for cols
-  for(int index = 0; index < NUM_ROWS; index++)
-  {
-    digitalWrite(rowClockPin, HIGH);
-    digitalWrite(colClockPin, HIGH);
-    digitalWrite(rowClockPin, LOW);
-    digitalWrite(colClockPin, LOW);  
-  }
-
-  // init to first column on:
   currCol = 0;
-  digitalWrite(colSignalPin, HIGH);
-  digitalWrite(colClockPin, HIGH);
-  digitalWrite(colClockPin, LOW);
-}
-
-void setColumn(int col)
-{
-  digitalWrite(colSignalPin, LOW);
-  for(int index = 0; index < 9; index++)
-  {
-    digitalWrite(colClockPin, HIGH);
-    digitalWrite(colClockPin, LOW);
-  }  
-
-  digitalWrite(colSignalPin, HIGH);
-  digitalWrite(colClockPin, HIGH);
-  digitalWrite(colClockPin, LOW);
-
-  digitalWrite(colSignalPin, LOW);
-  for(int index = 0; index <= col; index++)
-  {
-    digitalWrite(colClockPin, HIGH);
-    digitalWrite(colClockPin, LOW);
-  }
-}
-
-void advanceColumn()
-{
-  currCol = (currCol+1) % 8;
-
-  digitalWrite(colSignalPin, currCol == 0 ? HIGH : LOW);
-
-  // toggle the column clock
-  digitalWrite(colClockPin, HIGH);
-  digitalWrite(colClockPin, LOW);
 }
 
 void writeByte(unsigned char val, int signalPin, int clockPin)
@@ -261,10 +214,20 @@ void writeByte(unsigned char val, int signalPin, int clockPin)
   }  
 }
 
+void setColumn(int col)
+{
+  shiftOut(colSignalPin, colClockPin, MSBFIRST, 0x01 << col);
+
+  digitalWrite(colClockPin, HIGH);
+  digitalWrite(colClockPin, LOW);
+}
+
 void setRow(unsigned char rByte, unsigned char gByte)
 {
-  writeByte(gByte, rowSignalPin, rowClockPin);    
-  writeByte(rByte, rowSignalPin, rowClockPin);    
+//  writeByte(gByte, rowSignalPin, rowClockPin);    
+//  writeByte(rByte, rowSignalPin, rowClockPin);    
+  shiftOut(rowSignalPin, rowClockPin, LSBFIRST, ~gByte);
+  shiftOut(rowSignalPin, rowClockPin, LSBFIRST, ~rByte);
 
   digitalWrite(rowClockPin, HIGH);
   digitalWrite(rowClockPin, LOW);
@@ -279,7 +242,6 @@ void setup() {
 
   unsigned long currentMillis = millis();
   nextLetterTime = currentMillis + updateLetterInterval;
-
   
   reset();
 }
@@ -307,7 +269,6 @@ void loop()
       setRow(rMessage2[currLetter][currCol], gMessage2[currLetter][currCol]);
     }
     currGlyphLevel = (currGlyphLevel+1) % 3;
-//    advanceColumn();
     digitalWrite(outputEnablePin, LOW);
 
     currCol = (currCol+1) % NUM_COLS;
