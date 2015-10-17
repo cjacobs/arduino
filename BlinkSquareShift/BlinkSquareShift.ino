@@ -4,9 +4,7 @@ const int NUM_COLS = 8;
  
 const int rowSignalPin = 12;
 const int rowClockPin = 11;
-const int colSignalPin = 10;
-const int colClockPin = 9;
-const int outputEnablePin = 8;
+const int outputEnablePin = 10;
 
 const int nextRowInterval = 0;
 unsigned long nextRowTime = 0;
@@ -181,11 +179,17 @@ unsigned char check2[] = {
 
 const unsigned char blankChar[] = {0,0,0,0,0,0,0,0};
 
-const unsigned char* rMessage[] =  {zChar, oChar, eChar, spaceChar, eyeChar, fullHeartChar, uChar, spaceChar, smileCharA1, smileCharB1, spaceChar, check1};
-const unsigned char* rMessage2[] = {zChar, oChar, eChar, spaceChar, eyeChar, hollowHeartChar, uChar, spaceChar, smileCharA1, smileCharB1, spaceChar, check1};
+//const unsigned char* rMessage[] =  {zChar, oChar, eChar, spaceChar, eyeChar, fullHeartChar, uChar, spaceChar, smileCharA1, smileCharB1, spaceChar, check1};
+//const unsigned char* rMessage2[] = {zChar, oChar, eChar, spaceChar, eyeChar, hollowHeartChar, uChar, spaceChar, smileCharA1, smileCharB1, spaceChar, check1};
 
-const unsigned char* gMessage[] =  {zChar, oChar, eChar, spaceChar, eyeChar, insideHeartChar, uChar, spaceChar, smileCharA2, smileCharB2, spaceChar, check2};
-const unsigned char* gMessage2[] = {zChar, oChar, eChar, spaceChar, eyeChar, spaceChar, uChar, spaceChar, smileCharA2, smileCharB2, spaceChar, check2};
+//const unsigned char* gMessage[] =  {zChar, oChar, eChar, spaceChar, eyeChar, insideHeartChar, uChar, spaceChar, smileCharA2, smileCharB2, spaceChar, check2};
+//const unsigned char* gMessage2[] = {zChar, oChar, eChar, spaceChar, eyeChar, spaceChar, uChar, spaceChar, smileCharA2, smileCharB2, spaceChar, check2};
+
+const unsigned char* rMessage[]  = {check1};
+const unsigned char* rMessage2[] = {check1};
+const unsigned char* gMessage[] =  {check2};
+const unsigned char* gMessage2[] = {check2};
+
 
 const int NUM_LETTERS = sizeof(rMessage) / sizeof(rMessage[0]);
 int currLetter = 0;
@@ -216,10 +220,7 @@ void writeByte(unsigned char val, int signalPin, int clockPin)
 
 void setColumn(int col)
 {
-  shiftOut(colSignalPin, colClockPin, MSBFIRST, 0x01 << col);
-
-  digitalWrite(colClockPin, HIGH);
-  digitalWrite(colClockPin, LOW);
+  shiftOut(rowSignalPin, rowClockPin, MSBFIRST, 0x01 << col);
 }
 
 void setRow(unsigned char rByte, unsigned char gByte)
@@ -236,8 +237,6 @@ void setRow(unsigned char rByte, unsigned char gByte)
 void setup() {
   pinMode(rowSignalPin, OUTPUT);
   pinMode(rowClockPin, OUTPUT);
-  pinMode(colSignalPin, OUTPUT);
-  pinMode(colClockPin, OUTPUT);
   pinMode(outputEnablePin, OUTPUT);
 
   unsigned long currentMillis = millis();
