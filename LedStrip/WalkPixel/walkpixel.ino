@@ -47,11 +47,27 @@ void loop()
 
     gradient(0, numPixels, 2);
     gradient(1, numPixels, 2);
-    delay(10000);
-    return;
-    
-    walkPixel(0, numPixels, 2, evenColor, 50);
-    walkPixel(1, numPixels, 2, evenColor, 50);
+    delay(800);
+    colorFill(strip.Color(0, 0, 0));    
+    delay(200);
+
+    gradient(0, numPixels, 2);
+    gradient(1, numPixels, 2);
+    delay(200);
+    colorFill(strip.Color(0, 0, 0));    
+    delay(200);
+
+    gradient(0, numPixels, 2);
+    gradient(1, numPixels, 2);
+    delay(200);
+    colorFill(strip.Color(0, 0, 0));    
+    delay(200);
+
+    for(int index = 0; index < 5; ++index)
+    {
+      walkPixel(0, numPixels, 2, evenColor, 50);
+      walkPixel(1, numPixels, 2, evenColor, 50);
+    }
 }
 
 void walkPixel(int start, int end, int increment, uint32_t color, int t)
@@ -109,8 +125,8 @@ void colorFill(uint32_t c)
     for (uint16_t i = 0; i < strip.numPixels(); i++)
     {
         strip.setPixelColor(i, c);
-        strip.show();
     }
+    strip.show();
 }
 
 // Fill the dots one after the other with a color
