@@ -4,9 +4,24 @@
 #include <Adafruit_L3GD20_U.h>
 #include <Adafruit_Sensor.h>
 
+const bool useAccel = true;
+
 const int signalPin = 7;
 const int outputEnablePin = 6;
 const int clockPin = 5;
+
+int currCol = -1;
+int dir = 0;
+
+int patternPeriod = 1000; // ms
+//int colDuration = patternPeriod / patternLen;
+int colDuration = 5;
+unsigned long nextColTime = 0;
+unsigned long testOffTime = 0;
+
+float filterAlpha = 0.75;
+float peakThresh = 10.0;
+int minPeakDist = 30;
 
 // ---> == bottom
 
@@ -43,35 +58,29 @@ const unsigned char pattern2[] = {
 
  const unsigned char pattern[] = { 
 //  0,0,0,0,0,0,0,0,
-  0b01111111,
-  0b00001000,
-  0b00001000,
-  0b00001000,
-  0b00001000,
-  0b01111111,
+  0,0,
+  0b00001101,
+  0b00010101,
+  0b00001110,
   0b00000000,
   0b00000000,
+  0b00001110,
+  0b00010001,
+  0b00010001,
+  0b00001110,
   0b00000000,
-  0b01011111,
   0b00000000,
-  0b00000001,
   0b01000010,
-  0b01000110,
-  0b01001010,
-  0b01010010,
   0b01100010,
-  0b01000010,
+  0b01010010,
+  0b01001010,
+  0b01000110,
+  0b01000010,  
+  0,0,0,0,0,0,0,0,0,0,0,
   0b00000000 };
 
 const int patternLen = sizeof(pattern)/sizeof(pattern[0]);
 
-int currCol = -1;
-int dir = 0;
-
-int patternPeriod = 1000; // ms
-//int colDuration = patternPeriod / patternLen;
-int colDuration = 5;
-unsigned long nextColTime = 0;
 
 /* Assign a unique ID to the sensors */
 Adafruit_9DOF                dof   = Adafruit_9DOF();
@@ -84,12 +93,14 @@ float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 
 void writeColPattern(unsigned char col)
 {
+  digitalWrite(outputEnablePin, HIGH);
+  
   shiftOut(signalPin, clockPin, LSBFIRST, col);
-
   digitalWrite(clockPin, HIGH);
   digitalWrite(clockPin, LOW);
-}
 
+  digitalWrite(outputEnablePin, LOW);
+}
 
 void initSensors()
 {
@@ -107,7 +118,6 @@ void initSensors()
   }
 }
 
-
 void setup() {
   // put your setup code here, to run once:
   pinMode(signalPin, OUTPUT);
@@ -117,7 +127,7 @@ void setup() {
   /* Initialise the sensors */
   initSensors();
 
-//  Serial.begin(115200);
+  Serial.begin(115200);
 }
 
 
@@ -147,6 +157,7 @@ unsigned long prev_peak_time = 0;
 int find_peak(float thresh, int min_peak_dist)
 {
   unsigned long curr_time = millis();
+    
   if(curr_time-prev_peak_time < min_peak_dist && curr_time > prev_peak_time)
   {
     return 0;
@@ -174,9 +185,17 @@ int find_peak(float thresh, int min_peak_dist)
   return peak_val;
 }
 
+
+int baseFreq = 10; // only operate at 100hz
 void loop() {
   // put your main code here, to run repeatedly:
   unsigned long currentMillis = millis();
+
+
+//  if(currentMillis % baseFreq != 0)
+//  {
+//    return;
+//  }
 
   // about 2600 us to read both
   // about 1600 us to read mag
@@ -190,59 +209,78 @@ void loop() {
   accel.getEvent(&accel_event);
   //mag.getEvent(&mag_event);
 
+  Serial.print(accel_event.acceleration.x); Serial.print("\t");
+  Serial.print(accel_event.acceleration.y); Serial.print("\t");
+  Serial.print(accel_event.acceleration.z); Serial.print("\t");
+  Serial.println();
+
   // y value is what we want for detecting want motion
-  // TODO: filter
   // TODO: mean-subtract over long period (IIR with very small alpha?), in case wand is tipped so y includes gravity
-  filter_signal(accel_event.acceleration.y, 0.85);
-  // TODO detect peaks in y
-  int peak_dir = find_peak(5,50);
+  filter_signal(accel_event.acceleration.y, filterAlpha);
+  int peak_dir = find_peak(peakThresh, minPeakDist);
 
-  if(peak_dir == 1)
+  if(useAccel)
   {
-    dir = 1;
-    currCol = 0;
-    //nextColTime = currentMillis+10;
-  }
-  else if(peak_dir == -1)
-  {
-    dir = -1;
+    if(peak_dir == 1)
+    {
+      dir = 1;
+      currCol = -1;
+      nextColTime = 0;
+    }
+    else if(peak_dir == -1)
+    {
+      dir = 1;
+   //   nextColTime = 0;
+    }
   }
 
-
-  // maybe just set dir to direction of y accel?
+  // maybe just set dir to direction of y accel? -- no, need direction of y velocity
   // or maybe double-integrate y accel to get position
   // and reset on peaks?
+  // or just integrate accel to get velocity = dir, and reset on peaks
   
-//  Serial.print(accel_event.acceleration.x); Serial.print("\t");
-//  Serial.print(accel_event.acceleration.y); Serial.print("\t");
-//  Serial.print(accel_event.acceleration.z); Serial.print("\t");
-//  Serial.println();
   if(currentMillis > nextColTime)
   {
     currCol += dir;
-/*
-    if(currCol >= patternLen)
+
+    if(!useAccel)
     {
-      currCol = patternLen-1;
-      dir = -1;
+      if(currCol >= patternLen)
+      {
+        currCol = patternLen;
+        dir = -1;
+      }
+      else if(currCol < 0)
+      {
+        currCol = -1;
+        dir = 1;      
+      }
     }
-    else if(currCol < 0)
+
+    const bool test = false;
+    if(test)
     {
-      currCol = 0;
-      dir = 1;      
-    }
-*/
-    
-    digitalWrite(outputEnablePin, HIGH);
-    if(currCol >= 0 && currCol < patternLen && dir == 1)
-    {
-      writeColPattern(pattern[currCol]);      
+      if(peak_dir == -1)
+      {
+        writeColPattern(0xff);
+        testOffTime = currentMillis+2;
+      }
+      if(currentMillis > testOffTime)
+      {
+        writeColPattern(0x00);
+      }
     }
     else
     {
-      writeColPattern(blankPattern);
+      if(currCol >= 0 && currCol < patternLen && dir == 1)
+      {
+        writeColPattern(pattern[currCol]);      
+      }
+      else
+      {
+        writeColPattern(blankPattern);
+      }   
     }
-    digitalWrite(outputEnablePin, LOW);
 
     nextColTime += colDuration;
   }

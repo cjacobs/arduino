@@ -49,58 +49,6 @@ void walkPixel(int start, int end, int increment, uint32_t color, int t, int t2=
 }
 
 
-void setup()
-{
-// This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
-#if defined(__AVR_ATtiny85__)
-    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
-#endif
-    // End of trinket special code
-
-    //  Serial.begin(9600);
-    //  Serial.println("Hello");
-
-    strip.begin();
-    strip.show(); // Initialize all pixels to 'off'
-}
-
-int offset = 0;
-
-void loop()
-{
-    auto purple = strip.Color(64, 0, 192);  // Purple
-    auto aqua = strip.Color(0, 128, 192);  // Aqua
-    auto white = strip.Color(255, 224, 140); // 
-//    auto white = strip.Color(255, 255, 255); // 
-    int numPixels = strip.numPixels();
-/*
-    gradient(0, numPixels, 2);
-    gradient(1, numPixels, 2);
-    delay(800);
-    colorFill(strip.Color(0, 0, 0));    
-    delay(200);
-
-    gradient(0, numPixels, 2);
-    gradient(1, numPixels, 2);
-    delay(200);
-    colorFill(strip.Color(0, 0, 0));    
-    delay(200);
-*/
-    gradient(0, numPixels, 2);
-    gradient(1, numPixels, 2);
-    delay(200);
-    colorFill(strip.Color(0, 0, 0));    
-    delay(200);
-
-    for(int index = 0; index < 5; ++index)
-    {
-      walkPixel(0, numPixels, 2, purple, 500);
-      walkPixel(1, numPixels, 2, aqua, 50);
-    }
-
-//    delay(10000);
-}
-
 
 void gradient(int start, int end, int increment)
 {
@@ -153,3 +101,58 @@ void colorWipe(uint32_t c, uint8_t wait)
         delay(wait);
     }
 }
+
+void setup()
+{
+// This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
+#if defined(__AVR_ATtiny85__)
+    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
+#endif
+    // End of trinket special code
+
+    //  Serial.begin(9600);
+    //  Serial.println("Hello");
+
+    strip.begin();
+    strip.show(); // Initialize all pixels to 'off'
+}
+
+bool done = false;
+
+void loop()
+{
+  if(done) return;
+  
+    auto grey = strip.Color(128, 128, 128);
+    auto white = strip.Color(255, 224, 140);
+    auto black = strip.Color(0, 0, 0);
+    int numPixels = strip.numPixels();
+
+    // 1 second all on
+    colorFill(grey);
+    delay(1000);
+
+    // 1/2 second all off
+    colorFill(black);
+    delay(500);
+    
+    for (int index = 0; index < numPixels; ++index)
+    {
+        strip.setPixelColor(index, white);
+        strip.show();
+        delay(500);
+
+        colorFill(black);
+        delay(500);
+    }
+
+    // 1 second all on
+    colorFill(grey);
+    delay(1000);
+
+    colorFill(black);
+    delay(10000);
+
+    done = true;
+}
+
